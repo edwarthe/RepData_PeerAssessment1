@@ -18,17 +18,58 @@ mn <- mean(tapply(activity$steps,activity$date,sum,na.rm=TRUE))
 ## What is the average daily activity pattern?
 ### Plot of the  5-minute interval / Average number of steps(across all days):
 ```{r,echo=TRUE}
-ave_steps<-tapply(activity$steps,activity$interval,mean,na.rm=TRUE)
-min_inter<-unique(activity$interval)
-plot(min_inter,ave_steps,type="l",xlab="5-minute intervals",ylab="Average steps",main="Average steps per 5-minute intervals")
-max<-which.max(ave_steps)
-min_interval<-min_inter[max]
-average_steps_max<-ave_steps[max][[1]]
+ave_steps <- aggregate(steps ~ interval, data=activity, mean)
+plot(ave_steps$interval,ave_steps$steps,type="l",xlab="5-minute intervals",ylab="Average steps",main="Average steps per 5-minute intervals")
+
+max_interval<-ave_steps$interval[which.max(ave_steps$steps)]
+average_steps_max<-ave_steps$steps[which.max(ave_steps$steps)]
 ```
-### 5-minute interval with maximun number of steps on average: `r min_interval`
+### 5-minute interval with maximun number of steps on average: `r max_interval`
 ### Maximun number of steps on average: `r average_steps_max`
 ## Imputing missing values
+```{r,echo=TRUE}
+miss<-sum(is.na(activity$steps))
+```
+### Total number of missing values in datasets is : `r miss`
+### The strategy for filling in all of the missing values in the dataset consist in to use the mean for that 5-minute interval.
+```{r,echo=TRUE}
+activity <- merge(activity, ave_steps, by="interval", suffixes=c("","_meanxinterval"))
+activity[is.na(activity$steps),2]<-activity[is.na(activity$steps),4]
 
+hist(tapply(activity$steps,activity$date,sum,na.rm=TRUE),main="Total steps per day (missing values off)",xlab="Steps")
+mdn <- median(tapply(activity$steps,activity$date,sum,na.rm=TRUE))
+mn <- mean(tapply(activity$steps,activity$date,sum,na.rm=TRUE))
+```
+### Mean per day: `r mn`
+### Median per day: `r mdn`
+
+### These values differ from the estimates from the first part of the assignment, the mean and median are the same. Additionally the histogram is more symmetric around de mean/median. The impact of imputing missing data on the estimates of the total daily number of steps is high.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r,echo=TRUE}
+# Set language to English
+Sys.setenv(LANGUAGE="en")
+Sys.setlocale("LC_TIME", "English")
+
+# Create column with day of week
+activity$dayOfWeek<-as.factor(weekdays(as.Date(activity$date)))
+
+# Create column with type day of week
+activity$typeDayOfWeek <- as.factor(sapply(activity$dayOfWeek,function(day) if (day %in% c("Saturday","Sunday")){ "weekend" }else {"weekday"}))
+
+# Average steps for weekend
+ave_steps_weekend <- aggregate(steps ~ interval,data=activity,subset=activity$typeDayOfWeek=="weekend",mean)
+
+# Average steps for weekday
+ave_steps_weekday <- aggregate(steps ~ interval,data=activity,subset=activity$typeDayOfWeek=="weekday",mean)
+
+# Plots Average steps for weekend and Average steps for weekday
+par(mfrow=c(2,1))
+
+plot(ave_steps_weekend$interval,ave_steps_weekend$steps,type="l",xlab="5-minute intervals",ylab="Average steps",main="Average steps per 5-minute intervals in weekend")
+plot(ave_steps_weekday$interval,ave_steps_weekday$steps,type="l",xlab="5-minute intervals",ylab="Average steps",main="Average steps per 5-minute intervals in weekday")
+
+```
+### There are more average steps in weekend compared to weekdays.
